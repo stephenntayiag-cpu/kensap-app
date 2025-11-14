@@ -21,14 +21,9 @@ if not os.path.exists(USERS_FILE):
     with open(USERS_FILE, "w") as f:
         json.dump({}, f)
 
-# Register callbacks from other modules
-gallery.register_callbacks(app)
-profile.register_callbacks(app)
-alumni.register_callbacks(app)
-
-# ------------------------
+# -----------------------------
 # Page layouts
-# ------------------------
+# -----------------------------
 login_layout = html.Div([
     dbc.Container([
         html.H2("KenSAP Login", className="text-center", style={"marginTop": "50px"}),
@@ -67,12 +62,7 @@ app.layout = html.Div([
         html.Hr(),
         html.P(
             "© 2025 KenSAP | Designed by Stephen Ntayia",
-            style={
-                'textAlign': 'center',
-                'color': 'white',
-                'fontSize': '14px',
-                'marginBottom': '20px'
-            }
+            style={'textAlign': 'center', 'color': 'white', 'fontSize': '14px', 'marginBottom': '20px'}
         )
     ], style={
         'width': '100%',
@@ -83,7 +73,16 @@ app.layout = html.Div([
     })
 ])
 
+# -----------------------------
+# Register callbacks from other modules
+# -----------------------------
+gallery.register_callbacks(app)
+profile.register_callbacks(app)
+alumni.register_callbacks(app)
+
+# -----------------------------
 # Page routing
+# -----------------------------
 @app.callback(
     Output('page-content', 'children'),
     Input('url', 'pathname'),
@@ -93,16 +92,19 @@ def display_page(pathname, session_data):
     if pathname == '/homepage':
         return homepage.layout
     elif pathname == '/gallery':
-        return gallery.layout()
+        return gallery.layout  # note: no parentheses
     elif pathname == '/alumni':
-        return alumni.layout()
+        return alumni.layout
     elif pathname == '/profile':
         return profile.layout(session_data)
     elif pathname == '/logout':
         return html.Div("You have logged out")
     else:
         return login_layout
-    
+
+# -----------------------------
+# Authentication callbacks
+# -----------------------------
 @app.callback(
     Output("login-output", "children"),
     Output("user-session", "data"),
