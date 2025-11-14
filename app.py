@@ -91,7 +91,7 @@ alumni.register_callbacks(app)
 def display_page(pathname, session_data):
     if pathname == '/homepage':
         return html.Div([
-            layout = html.Div([
+            html.Div([
     dbc.Container([
         html.H1("Welcome to KenSAP", style={'textAlign': 'center', 'color': '#C0154B', 'marginTop': '30px'}),
         html.H4("Empowering Kenya’s Brightest Minds for Global Impact",
@@ -187,5 +187,6 @@ def handle_logout(pathname, session_data):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
+
 
 
