@@ -47,7 +47,7 @@ app.layout = html.Div([
         color="black",
         dark=True,
         children=[
-            dbc.NavItem(dbc.NavLink("Home", href="/homepage")),
+            dbc.NavItem(dbc.NavLink("Home", href="/")),
             dbc.NavItem(dbc.NavLink("Gallery", href="/gallery")),
             dbc.NavItem(dbc.NavLink("Alumni", href="/alumni")),
             dbc.NavItem(dbc.NavLink("Profile", href="/profile")),
@@ -187,6 +187,7 @@ def handle_logout(pathname, session_data):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
+
 
 
 
