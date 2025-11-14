@@ -90,11 +90,11 @@ alumni.register_callbacks(app)
 )
 def display_page(pathname, session_data):
     if pathname == '/homepage':
-        return homepage.layout
+        return homepage.layout()
     elif pathname == '/gallery':
-        return gallery.layout  # note: no parentheses
+        return gallery.layout() 
     elif pathname == '/alumni':
-        return alumni.layout
+        return alumni.layout()
     elif pathname == '/profile':
         return profile.layout(session_data)
     elif pathname == '/logout':
@@ -156,3 +156,4 @@ def handle_logout(pathname, session_data):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
+
