@@ -90,7 +90,38 @@ alumni.register_callbacks(app)
 )
 def display_page(pathname, session_data):
     if pathname == '/homepage':
-        return homepage.layout()
+        return html.Div([
+            layout = html.Div([
+    dbc.Container([
+        html.H1("Welcome to KenSAP", style={'textAlign': 'center', 'color': '#C0154B', 'marginTop': '30px'}),
+        html.H4("Empowering Kenya’s Brightest Minds for Global Impact",
+                style={'textAlign': 'center', 'color': '#555555', 'marginBottom': '20px'}),
+        dbc.Button("Learn More", color="primary", href="/gallery",
+                   style={'display': 'block', 'margin': '0 auto', 'marginBottom': '40px'})
+    ]),
+
+    dbc.Container([
+        html.H2("About KenSAP", style={'color': '#C0154B', 'marginTop': '20px'}),
+        html.P(
+            "The Kenya Scholar Access Program (KenSAP) is a non-profit initiative that identifies, prepares, "
+            "and connects exceptional Kenyan students from underprivileged backgrounds with educational opportunities "
+            "at some of the world’s leading universities, primarily in North America. "
+            "Since its founding in 2004, KenSAP has transformed the lives of hundreds of scholars.",
+            style={'fontSize': '18px', 'lineHeight': '1.8'}
+        ),
+    ], style={'marginBottom': '40px'}),
+
+    dbc.Container([
+        html.H2("Our Impact", style={'color': '#C0154B', 'marginTop': '20px', 'textAlign': 'center'}),
+        html.P(
+            "Over 320 students helped to access top universities globally.\n"
+            "Alumni active in leadership, research, and entrepreneurship.\n"
+            "Annual fundraising and mentoring programs to sustain opportunities.",
+            style={'fontSize': '16px', 'lineHeight': '1.8', 'textAlign': 'center'}
+        )
+    ], style={'marginBottom': '40px'}),
+])
+        ])
     elif pathname == '/gallery':
         return gallery.layout() 
     elif pathname == '/alumni':
@@ -156,4 +187,5 @@ def handle_logout(pathname, session_data):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
+
 
