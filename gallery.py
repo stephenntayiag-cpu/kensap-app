@@ -2,7 +2,7 @@ import os
 from dash import html, dcc, callback_context
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, ALL
-from app import app  # import the main app instance
+import dash  # added to support PreventUpdate
 
 # Paths
 PHOTOS_FOLDER = "static/photos"
@@ -40,7 +40,8 @@ for filename in os.listdir(PHOTOS_FOLDER):
                 html.Img(src=f"/{PHOTOS_FOLDER}/{filename}", style={"width": "300px", "margin": "10px 0"}),
                 html.Div(id={'type': 'comments', 'index': filename}),
                 dbc.Input(id={'type': 'input', 'index': filename}, placeholder="Add a comment...", type="text", style={"marginTop": "5px"}),
-                dbc.Button("Submit", id={'type': 'submit', 'index': filename}, color="primary", n_clicks=0, style={"marginTop": "5px", "marginBottom": "20px"})
+                dbc.Button("Submit", id={'type': 'submit', 'index': filename}, color="primary", n_clicks=0,
+                           style={"marginTop": "5px", "marginBottom": "20px"})
             ], style={"border": "1px solid #ccc", "padding": "10px", "marginBottom": "20px"})
         )
 
@@ -48,6 +49,12 @@ layout = html.Div([
     html.H2("Gallery", style={"textAlign": "center", "marginTop": "20px"}),
     html.Div(photo_elements)
 ])
+
+# -----------------------------------------------------------------
+# IMPORT APP AT THE BOTTOM → prevents circular import
+# -----------------------------------------------------------------
+from app import app
+
 
 # Callback for handling all comments
 @app.callback(
@@ -65,17 +72,17 @@ def handle_comments(n_clicks_list, comments_list_state):
     triggered_id = ctx.triggered[0]['prop_id'].split('.')[0]
     triggered_id = eval(triggered_id)  # convert from string to dict
     photo_name = triggered_id['index']
-    
+
     input_index = None
     for i, comp_id in enumerate(ctx.inputs_list[0]):
         if comp_id['id']['index'] == photo_name:
             input_index = i
             break
-    
+
     comment_text = comments_list_state[input_index]
     if comment_text and comment_text.strip() != "":
         save_comment(photo_name, comment_text.strip())
-    
+
     # Refresh all comments
     all_comments_children = []
     for filename in os.listdir(PHOTOS_FOLDER):
