@@ -95,12 +95,14 @@ alumni.register_callbacks(app)
     State('user-session', 'data')
 )
 def display_page(pathname, session_data):
-    # Restrict pages unless logged in
-    if pathname not in ['/login', '/'] and not session_data:
+    # Restrict all pages except login to logged-in users
+    if pathname != '/login' and not session_data:
         return login_layout
 
     if pathname == '/' or pathname == '/login':
         return login_layout
+    elif pathname == '/homepage':
+        return homepage.layout  # Homepage now does not trigger login
     elif pathname == '/gallery':
         return gallery.layout()
     elif pathname == '/alumni':
@@ -109,8 +111,6 @@ def display_page(pathname, session_data):
         return profile.layout(session_data)
     elif pathname == '/logout':
         return html.Div("You have logged out")
-    elif pathname == '/homepage':
-        return homepage.layout(session_data)  # <- pass session_data so login persists
     else:
         return login_layout
 
@@ -174,4 +174,5 @@ def handle_auth_and_logout(login_click, signup_click, pathname, username, passwo
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
+
 
