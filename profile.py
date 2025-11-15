@@ -45,9 +45,13 @@ def register_callbacks(app):
         profile_file = get_profile_path(username)
         if not os.path.exists(profile_file):
             return html.P("No info yet. Add your info below!")
-        with open(profile_file, "r") as f:
+        with open(profile_file, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return html.P(data.get("info", "No info yet."))
+        info_content = data.get("info", "No info yet.")
+        if isinstance(info_content, list):
+            return html.Div([html.P(item) for item in info_content])
+        else:
+            return html.P(info_content)
 
     @app.callback(
         Output("profile-output", "children"),
@@ -63,6 +67,21 @@ def register_callbacks(app):
             return "Please enter some text to save."
         username = user_session.get("username")
         profile_file = get_profile_path(username)
-        with open(profile_file, "w") as f:
-            json.dump({"info": info_text}, f)
+
+        # Read existing info if present
+        existing_info = []
+        if os.path.exists(profile_file):
+            with open(profile_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                existing_info = data.get("info", [])
+                if isinstance(existing_info, str):  # convert old string format to list
+                    existing_info = [existing_info]
+
+        # Append new info
+        existing_info.append(info_text.strip())
+
+        # Save updated info
+        with open(profile_file, "w", encoding="utf-8") as f:
+            json.dump({"info": existing_info}, f, ensure_ascii=False)
+
         return "Your info has been saved successfully!"
