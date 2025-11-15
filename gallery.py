@@ -1,5 +1,6 @@
 import os
-from dash import html, dcc
+import dash
+from dash import html, dcc, callback_context
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, ALL
 from datetime import datetime
@@ -84,7 +85,7 @@ def register_callbacks(app):
         prevent_initial_call=True
     )
     def handle_comments(n_clicks_list, n_intervals, input_values, user_session):
-        ctx = dash.callback_context
+        ctx = callback_context
         username = user_session.get("username", "Unknown User") if user_session else "Unknown User"
 
         comments = safe_load_comments()
@@ -121,3 +122,4 @@ def register_callbacks(app):
         # Reset all input boxes
         reset_inputs = [""] * len(input_values)
         return all_comments, reset_inputs
+
