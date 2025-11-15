@@ -5,7 +5,6 @@ from dash import html, dcc, callback_context
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, ALL
 from datetime import datetime
-from profile import get_current_username  # Assuming this function exists
 
 # -----------------------------
 # Paths and files
@@ -69,7 +68,7 @@ def layout():
 
     return html.Div([
         html.H2("Gallery", style={"textAlign": "center", "marginTop": "20px"}),
-        dcc.Store(id="current-user", data={"username": get_current_username()}, storage_type="session"),
+        dcc.Store(id="current-user", data={"username": "Unknown"}, storage_type="session"),
         html.Div(photo_elements)
     ])
 
@@ -82,7 +81,7 @@ def register_callbacks(app):
         Output({'type': 'input', 'index': ALL}, 'value'),
         Output({'type': 'status', 'index': ALL}, 'children'),
         Input({'type': 'submit', 'index': ALL}, 'n_clicks'),
-        Input({'type': 'show', 'index': ALL}, 'n_clicks'),  # show comments button
+        Input({'type': 'show', 'index': ALL}, 'n_clicks'),
         State({'type': 'input', 'index': ALL}, 'value'),
         State({'type': 'comments', 'index': ALL}, 'id'),
         State("current-user", "data"),
@@ -90,7 +89,7 @@ def register_callbacks(app):
     )
     def handle_comments(submit_n, show_n, input_values, comment_ids, user_session):
         ctx = callback_context
-        username = get_current_username() if user_session.get("username") == "Unknown" else user_session.get("username")
+        username = user_session.get("username", "Unknown User")
         comments = safe_load_comments()
         status_messages = [""] * len(input_values)
 
@@ -101,7 +100,6 @@ def register_callbacks(app):
             input_indices = [comp['id']['index'] for comp in ctx.inputs_list[0]]
             input_index = input_indices.index(photo_name)
 
-            # If submit button triggered
             if triggered_id['type'] == 'submit':
                 comment_text = input_values[input_index]
                 try:
@@ -122,11 +120,9 @@ def register_callbacks(app):
                 except Exception:
                     status_messages[input_index] = dbc.Alert("Failed to upload comment.", color="danger")
 
-            # If show comments button triggered, just load existing comments
             elif triggered_id['type'] == 'show':
                 status_messages[input_index] = dbc.Alert("Comments refreshed.", color="info")
 
-        # Build comments in same order as comment_ids
         all_comments = []
         for c_id in comment_ids:
             filename = c_id['index']
