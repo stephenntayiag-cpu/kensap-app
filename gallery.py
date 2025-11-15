@@ -1,18 +1,24 @@
 import os
-from dash import html, dcc, callback_context
+from dash import html, callback_context
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, ALL
 
-# Paths
+# -----------------------------
+# Paths and files
+# -----------------------------
 PHOTOS_FOLDER = "static/photos"
 COMMENTS_FILE = "data/comments.txt"
 
-# Ensure comments file exists
+os.makedirs(PHOTOS_FOLDER, exist_ok=True)
+os.makedirs("data", exist_ok=True)
+
 if not os.path.exists(COMMENTS_FILE):
     with open(COMMENTS_FILE, "w") as f:
         f.write("")
 
+# -----------------------------
 # Helper functions
+# -----------------------------
 def get_comments(photo_name):
     comments_list = []
     if os.path.exists(COMMENTS_FILE):
@@ -28,25 +34,29 @@ def save_comment(photo_name, comment):
     with open(COMMENTS_FILE, "a") as f:
         f.write(f"{photo_name}|{comment.strip()}\n")
 
-# Layout
-photo_elements = []
-for filename in os.listdir(PHOTOS_FOLDER):
-    if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-        photo_elements.append(
-            html.Div([
-                html.Img(src=f"/{PHOTOS_FOLDER}/{filename}", style={"width": "300px", "margin": "10px 0"}),
-                html.Div(id={'type': 'comments', 'index': filename}),
-                dbc.Input(id={'type': 'input', 'index': filename}, placeholder="Add a comment...", type="text"),
-                dbc.Button("Submit", id={'type': 'submit', 'index': filename}, color="primary", n_clicks=0, style={"marginTop": "5px"})
-            ], style={"border": "1px solid #ccc", "padding": "10px", "marginBottom": "20px"})
-        )
+# -----------------------------
+# Gallery layout
+# -----------------------------
+def layout():
+    photo_elements = []
+    for filename in os.listdir(PHOTOS_FOLDER):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+            photo_elements.append(
+                html.Div([
+                    html.Img(src=f"/{PHOTOS_FOLDER}/{filename}", style={"width": "300px", "margin": "10px 0"}),
+                    html.Div(id={'type': 'comments', 'index': filename}),
+                    dbc.Input(id={'type': 'input', 'index': filename}, placeholder="Add a comment...", type="text"),
+                    dbc.Button("Submit", id={'type': 'submit', 'index': filename}, color="primary", n_clicks=0, style={"marginTop": "5px"})
+                ], style={"border": "1px solid #ccc", "padding": "10px", "marginBottom": "20px"})
+            )
+    return html.Div([
+        html.H2("Gallery", style={"textAlign": "center", "marginTop": "20px"}),
+        html.Div(photo_elements)
+    ])
 
-layout = html.Div([
-    html.H2("Gallery", style={"textAlign": "center", "marginTop": "20px"}),
-    html.Div(photo_elements)
-])
-
-# Function to register callbacks with the app
+# -----------------------------
+# Register gallery callbacks
+# -----------------------------
 def register_callbacks(app):
     @app.callback(
         Output({'type': 'comments', 'index': ALL}, 'children'),
@@ -59,7 +69,7 @@ def register_callbacks(app):
         if not ctx.triggered:
             raise dash.exceptions.PreventUpdate
 
-        # Find which photo's submit button was clicked
+        # Identify which photo was submitted
         triggered_id = eval(ctx.triggered[0]['prop_id'].split('.')[0])
         photo_name = triggered_id['index']
 
@@ -69,7 +79,7 @@ def register_callbacks(app):
         if comment_text and comment_text.strip():
             save_comment(photo_name, comment_text.strip())
 
-        # Refresh all comments
+        # Refresh all comments for all photos
         all_comments_children = []
         for filename in os.listdir(PHOTOS_FOLDER):
             if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
