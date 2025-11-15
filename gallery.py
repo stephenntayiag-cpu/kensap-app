@@ -36,7 +36,6 @@ def get_comments(photo_name):
                             if fname == photo_name:
                                 comments_list.append((username, timestamp, text))
         except Exception:
-            # If file cannot be read, return empty
             return []
     return comments_list
 
@@ -46,7 +45,7 @@ def save_comment(photo_name, username, comment):
         with open(COMMENTS_FILE, "a", encoding="utf-8") as f:
             f.write(f"{photo_name}|{username}|{timestamp}|{comment.strip()}\n")
     except Exception:
-        # fail silently (bulletproof): do not crash the app
+        # Fail silently so app doesn't crash; optionally log in future
         pass
 
 # -----------------------------
@@ -54,34 +53,34 @@ def save_comment(photo_name, username, comment):
 # -----------------------------
 def layout():
     photo_elements = []
-    for filename in os.listdir(PHOTOS_FOLDER):
-        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-            photo_elements.append(
-                html.Div([
-                    html.Img(src=f"/{PHOTOS_FOLDER}/{filename}",
-                             style={"width": "300px", "margin": "10px 0"}),
+    photos_order = [f for f in os.listdir(PHOTOS_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+    for filename in photos_order:
+        photo_elements.append(
+            html.Div([
+                html.Img(src=f"/{PHOTOS_FOLDER}/{filename}",
+                         style={"width": "300px", "margin": "10px 0"}),
 
-                    # Comments display box
-                    html.Div(id={'type': 'comments', 'index': filename}),
+                # Comments display box (appears above input)
+                html.Div(id={'type': 'comments', 'index': filename}),
 
-                    # Comment input
-                    dbc.Input(id={'type': 'input', 'index': filename},
-                              placeholder="Add a comment...", type="text"),
+                # Comment input
+                dbc.Input(id={'type': 'input', 'index': filename},
+                          placeholder="Add a comment...", type="text"),
 
-                    # Submit button
-                    dbc.Button("Submit", id={'type': 'submit', 'index': filename},
-                               color="primary", n_clicks=0,
-                               style={"marginTop": "5px"}),
+                # Submit button
+                dbc.Button("Submit", id={'type': 'submit', 'index': filename},
+                           color="primary", n_clicks=0,
+                           style={"marginTop": "5px"}),
 
-                ], style={"border": "1px solid #ccc",
-                          "padding": "10px", "marginBottom": "20px"})
-            )
+            ], style={"border": "1px solid #ccc",
+                      "padding": "10px", "marginBottom": "20px"})
+        )
 
     return html.Div([
         html.H2("Gallery", style={"textAlign": "center", "marginTop": "20px"}),
-        dcc.Store(id="current-user", storage_type="session"),  # <- retrieves username
+        dcc.Store(id="current-user", storage_type="session"),  # username should be stored here by your login/profile logic
         html.Div(photo_elements),
-        dcc.Interval(id="update-interval", interval=2000, n_intervals=0)
+        dcc.Interval(id="update-interval", interval=1500, n_intervals=0)
     ])
 
 # -----------------------------
@@ -95,89 +94,77 @@ def register_callbacks(app):
         Input("update-interval", "n_intervals"),
         State({'type': 'input', 'index': ALL}, 'value'),
         State("current-user", "data"),
-        prevent_initial_call=True
+        prevent_initial_call=False
     )
     def handle_comments(n_clicks_list, n_intervals, inputs_values, user_session):
         """
-        Robust handler:
-         - If submit button triggered: save corresponding comment, clear that input only.
-         - If interval triggered: refresh comments only; don't clear inputs.
-        Returns:
-         - children for each comments div (in same order as files in PHOTOS_FOLDER)
-         - list of input values matching ALL inputs (cleared for only the submitted input)
+        - Saves comment when the corresponding Submit button is clicked.
+        - Clears only the input that was submitted.
+        - Rebuilds comments display for each photo (newest comments shown on top).
+        - Interval refresh keeps everyone in sync.
         """
         ctx = callback_context
-        # Defensive defaults
+
+        # Ensure inputs_values is a list
         if inputs_values is None:
             inputs_values = []
 
-        # Determine username
+        # Determine username from session store (falls back to 'Unknown User')
         username = "Unknown User"
-        if user_session and isinstance(user_session, dict) and "username" in user_session:
-            try:
-                username = user_session.get("username") or username
-            except Exception:
-                pass
+        try:
+            if isinstance(user_session, dict) and user_session.get("username"):
+                username = user_session.get("username")
+        except Exception:
+            username = "Unknown User"
 
-        triggered = None
+        # Determine which trigger fired
+        triggered_prop = None
         if ctx.triggered:
-            triggered = ctx.triggered[0]["prop_id"].split(".")[0]
+            triggered_prop = ctx.triggered[0]["prop_id"].split(".")[0]
 
-        # Default: do not change inputs (use dash.no_update for each)
+        # Build consistent photos order (same as layout)
+        photos_order = [f for f in os.listdir(PHOTOS_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+
+        # Default: do not change inputs (use dash.no_update)
         n_inputs = len(inputs_values)
         inputs_reset_list = [dash.no_update] * n_inputs
 
-        # If triggered by a submit button, save the corresponding comment
-        if triggered and triggered != "update-interval":
-            # parse id safely
+        # If a submit button triggered the callback, save the corresponding comment
+        if triggered_prop and triggered_prop != "update-interval":
+            # Parse the dict-like id string safely
             photo_name = None
             try:
-                # triggered comes as a string representation of a dict, safe-parse with ast.literal_eval
-                triggered_id = ast.literal_eval(triggered)
+                triggered_id = ast.literal_eval(triggered_prop)
                 photo_name = triggered_id.get("index")
             except Exception:
-                # fallback to eval (last resort)
                 try:
-                    triggered_id = eval(triggered)
+                    triggered_id = eval(triggered_prop)
                     photo_name = triggered_id.get("index")
                 except Exception:
                     photo_name = None
 
-            # Find index of this photo in the State list
-            target_input_index = None
+            # Find the index for this photo in photos_order
+            target_index = None
             try:
-                # ctx.states_list[0] is a list of state entries for the ALL state
-                state_list = ctx.states_list[0] if hasattr(ctx, "states_list") and ctx.states_list else None
-                if state_list:
-                    state_ids = [s['id']['index'] for s in state_list]
-                    if photo_name in state_ids:
-                        target_input_index = state_ids.index(photo_name)
-                else:
-                    # Fallback: try to match order by listing PHOTOS_FOLDER in the same manner as layout
-                    photos_order = [f for f in os.listdir(PHOTOS_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
-                    if photo_name in photos_order:
-                        target_input_index = photos_order.index(photo_name)
+                if photo_name in photos_order:
+                    target_index = photos_order.index(photo_name)
             except Exception:
-                target_input_index = None
+                target_index = None
 
-            # If we found the corresponding input, read and save its value
-            comment_text = None
-            if target_input_index is not None and target_input_index < len(inputs_values):
-                comment_text = inputs_values[target_input_index]
-            # If comment present, save it
-            if comment_text and isinstance(comment_text, str) and comment_text.strip():
-                save_comment(photo_name, username, comment_text.strip())
-                # Clear only that input on return
-                inputs_reset_list = [dash.no_update] * n_inputs
-                if target_input_index is not None and target_input_index < n_inputs:
-                    inputs_reset_list[target_input_index] = ""
+            # If we have a target index and corresponding input value, save it
+            if target_index is not None and target_index < len(inputs_values):
+                comment_text = inputs_values[target_index]
+                if comment_text and isinstance(comment_text, str) and comment_text.strip():
+                    save_comment(photo_name, username, comment_text.strip())
+                    # Clear that specific input
+                    inputs_reset_list = [dash.no_update] * n_inputs
+                    inputs_reset_list[target_index] = ""
         else:
-            # Interval triggered (or no trigger) -> keep inputs as-is (no clearing)
+            # Interval or page load triggered: do not clear inputs
             inputs_reset_list = [dash.no_update] * n_inputs
 
-        # Build the comments children for each photo in the same order as layout (filesystem order)
+        # Rebuild comments children for each photo (in same photos_order)
         all_comments_children = []
-        photos_order = [f for f in os.listdir(PHOTOS_FOLDER) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
         for filename in photos_order:
             try:
                 comment_tuples = get_comments(filename)
@@ -193,7 +180,7 @@ def register_callbacks(app):
                     ]
                     all_comments_children.append(html.Ul(formatted))
                 else:
-                    # keep an empty placeholder (so outputs align)
+                    # Empty placeholder (keeps outputs aligned)
                     all_comments_children.append(html.Div(""))
             except Exception:
                 all_comments_children.append(html.Div(""))
