@@ -69,7 +69,7 @@ def layout():
 
     return html.Div([
         html.H2("Gallery", style={"textAlign": "center", "marginTop": "20px"}),
-        dcc.Store(id="current-user", data={"username": "Unknown"}, storage_type="session"),
+        dcc.Store(id="current-user", storage_type="session"),  # <-- REMOVE initial data, will use user-session from app.py
         html.Div(photo_elements)
     ])
 
@@ -85,14 +85,16 @@ def register_callbacks(app):
         Input({'type': 'show', 'index': ALL}, 'n_clicks'),
         State({'type': 'input', 'index': ALL}, 'value'),
         State({'type': 'comments', 'index': ALL}, 'id'),
-        State("current-user", "data"),
+        State("user-session", "data"),  # <-- use global session from app.py
         prevent_initial_call=True
     )
     def handle_comments(submit_n, show_n, input_values, comment_ids, user_session):
         ctx = callback_context
-        username = get_current_username(user_session)  # <-- fixed username
+        username = get_current_username(user_session)  # <-- still works
         comments = safe_load_comments()
         status_messages = [""] * len(input_values)
+        ...
+
 
         triggered_id = ctx.triggered_id
 
@@ -141,3 +143,4 @@ def register_callbacks(app):
                 all_comments.append(html.P("No comments yet."))
 
         return all_comments, input_values, status_messages
+
