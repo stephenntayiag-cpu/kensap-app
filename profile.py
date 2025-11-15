@@ -33,6 +33,15 @@ def get_profile_path(username):
     safe_username = username.replace(" ", "_")
     return os.path.join(USERS_FOLDER, f"{safe_username}.json")
 
+# -----------------------------
+# Helper to get current username
+# -----------------------------
+def get_current_username(user_session):
+    """Return the current username from the session, or 'Unknown User' if not set."""
+    if user_session and "username" in user_session:
+        return user_session["username"]
+    return "Unknown User"
+
 def register_callbacks(app):
     @app.callback(
         Output("profile-display", "children"),
