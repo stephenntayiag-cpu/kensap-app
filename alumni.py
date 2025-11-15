@@ -1,6 +1,6 @@
 import os
 import json
-from dash import html
+from dash import html, dcc
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
@@ -22,13 +22,25 @@ def layout():
                 dbc.Input(id="alumni-name-input", placeholder="Enter your username", type="text", style={"marginTop": "10px"}),
                 dbc.Button("Add Me", id="add-alumni-button", color="primary", style={"marginTop": "10px"}),
                 html.Div(id="alumni-output", style={"marginTop": "15px", "color": "green"})
-            ], style={"marginTop": "30px"})
+            ], style={"marginTop": "30px"}),
+            dcc.Interval(id="alumni-refresh", interval=1000, n_intervals=0)  # refresh every 1s
         ])
     ])
 
 def register_callbacks(app):
     @app.callback(
         Output("alumni-list", "children"),
+        Input("alumni-refresh", "n_intervals")
+    )
+    def display_alumni(_):
+        with open(ALUMNI_FILE, "r", encoding="utf-8") as f:
+            alumni = json.load(f)
+        if not alumni:
+            return html.P("No alumni yet.")
+        return html.Ul([html.Li(name) for name in alumni])
+
+    @app.callback(
+        Output("alumni-output", "children"),
         Input("add-alumni-button", "n_clicks"),
         State("alumni-name-input", "value"),
         prevent_initial_call=True
@@ -48,19 +60,4 @@ def register_callbacks(app):
             with open(ALUMNI_FILE, "w", encoding="utf-8") as f:
                 json.dump(alumni, f, ensure_ascii=False)
 
-        # Display updated list
-        if not alumni:
-            return html.P("No alumni yet.")
-        return html.Ul([html.Li(n) for n in alumni])
-
-    @app.callback(
-        Output("alumni-output", "children"),
-        Input("add-alumni-button", "n_clicks"),
-        State("alumni-name-input", "value"),
-        prevent_initial_call=True
-    )
-    def show_add_message(n_clicks, name):
-        if not name or not name.strip():
-            return "Please enter a valid username."
-        name = name.strip()
         return f"{name} has been added to the alumni list!"
