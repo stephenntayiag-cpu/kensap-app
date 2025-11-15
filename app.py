@@ -95,6 +95,10 @@ alumni.register_callbacks(app)
     State('user-session', 'data')
 )
 def display_page(pathname, session_data):
+    # Restrict pages unless logged in
+    if pathname not in ['/login', '/'] and not session_data:
+        return login_layout
+
     if pathname == '/' or pathname == '/login':
         return login_layout
     elif pathname == '/gallery':
