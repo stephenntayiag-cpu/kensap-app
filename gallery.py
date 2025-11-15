@@ -70,27 +70,30 @@ def layout():
 # -----------------------------
 # Register gallery callbacks
 # -----------------------------
+# -----------------------------
+# Register gallery callbacks
+# -----------------------------
 def register_callbacks(app):
     @app.callback(
         Output({'type': 'comments', 'index': ALL}, 'children'),
         Output({'type': 'input', 'index': ALL}, 'value'),
         Input({'type': 'submit', 'index': ALL}, 'n_clicks'),
         State({'type': 'input', 'index': ALL}, 'value'),
+        State({'type': 'comments', 'index': ALL}, 'id'),  # get the IDs of comment divs
         State("current-user", "data"),
         prevent_initial_call=True
     )
-    def handle_comments(n_clicks_list, input_values, user_session):
+    def handle_comments(n_clicks_list, input_values, comment_ids, user_session):
         ctx = callback_context
         username = user_session.get("username", "Unknown User") if user_session else "Unknown User"
 
         comments = safe_load_comments()
 
-        # Only save new comment if a submit button was clicked
         triggered_id = ctx.triggered_id
         if triggered_id and triggered_id.get('type') == 'submit':
             photo_name = triggered_id['index']
 
-            # Map input values to photo names using the order of ALL inputs
+            # Find input index corresponding to the submitted photo
             input_indices = [c['index'] for c in ctx.inputs_list[0]]
             input_index = input_indices.index(photo_name)
             comment_text = input_values[input_index]
@@ -109,21 +112,23 @@ def register_callbacks(app):
             # Reset only the input box that was submitted
             input_values[input_index] = ""
 
-        # Build comment list for all photos
+        # Build comment list **in the same order as comment_ids**
         all_comments = []
-        for filename in os.listdir(PHOTOS_FOLDER):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-                photo_comments = comments.get(filename, [])
-                if photo_comments:
-                    formatted = [
-                        html.Li([
-                            html.B(f"{c['username']} – {c['timestamp']}"),
-                            html.Br(),
-                            html.Span(c['text'])
-                        ]) for c in photo_comments
-                    ]
-                    all_comments.append(html.Ul(formatted))
-                else:
-                    all_comments.append(html.P("No comments yet."))
+        for c_id in comment_ids:
+            filename = c_id['index']
+            photo_comments = comments.get(filename, [])
+            if photo_comments:
+                formatted = [
+                    html.Li([
+                        html.B(f"{c['username']} – {c['timestamp']}"),
+                        html.Br(),
+                        html.Span(c['text'])
+                    ]) for c in photo_comments
+                ]
+                all_comments.append(html.Ul(formatted))
+            else:
+                all_comments.append(html.P("No comments yet."))
 
         return all_comments, input_values
+
+
