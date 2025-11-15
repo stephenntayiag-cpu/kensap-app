@@ -58,6 +58,8 @@ def layout():
                     dbc.Button("Submit", id={'type': 'submit', 'index': filename},
                                color="primary", n_clicks=0, style={"marginTop": "5px"}),
 
+                    html.Div(id={'type': 'status', 'index': filename}, style={"marginTop": "5px"})  # status div
+
                 ], style={"border": "1px solid #ccc", "padding": "10px", "marginBottom": "20px"})
             )
 
@@ -68,15 +70,13 @@ def layout():
     ])
 
 # -----------------------------
-# Register gallery callbacks
-# -----------------------------
-# -----------------------------
-# Register gallery callbacks
+# Register gallery callbacks with status
 # -----------------------------
 def register_callbacks(app):
     @app.callback(
         Output({'type': 'comments', 'index': ALL}, 'children'),
         Output({'type': 'input', 'index': ALL}, 'value'),
+        Output({'type': 'status', 'index': ALL}, 'children'),  # new status output
         Input({'type': 'submit', 'index': ALL}, 'n_clicks'),
         State({'type': 'input', 'index': ALL}, 'value'),
         State({'type': 'comments', 'index': ALL}, 'id'),  # get the IDs of comment divs
@@ -89,6 +89,9 @@ def register_callbacks(app):
 
         comments = safe_load_comments()
 
+        # Initialize status messages for each photo
+        status_messages = [""] * len(input_values)
+
         triggered_id = ctx.triggered_id
         if triggered_id and triggered_id.get('type') == 'submit':
             photo_name = triggered_id['index']
@@ -98,19 +101,25 @@ def register_callbacks(app):
             input_index = input_indices.index(photo_name)
             comment_text = input_values[input_index]
 
-            if comment_text and comment_text.strip():
-                comment_entry = {
-                    "username": username,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                    "text": comment_text.strip()
-                }
-                if photo_name not in comments:
-                    comments[photo_name] = []
-                comments[photo_name].insert(0, comment_entry)  # newest on top
-                safe_save_comments(comments)
+            try:
+                if comment_text and comment_text.strip():
+                    comment_entry = {
+                        "username": username,
+                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "text": comment_text.strip()
+                    }
+                    if photo_name not in comments:
+                        comments[photo_name] = []
+                    comments[photo_name].insert(0, comment_entry)  # newest on top
+                    safe_save_comments(comments)
 
-            # Reset only the input box that was submitted
-            input_values[input_index] = ""
+                    # Reset input box
+                    input_values[input_index] = ""
+                    status_messages[input_index] = dbc.Alert("Comment uploaded!", color="success", duration=3000)
+                else:
+                    status_messages[input_index] = dbc.Alert("Cannot submit empty comment.", color="warning", duration=3000)
+            except Exception:
+                status_messages[input_index] = dbc.Alert("Failed to upload comment.", color="danger", duration=3000)
 
         # Build comment list **in the same order as comment_ids**
         all_comments = []
@@ -129,6 +138,4 @@ def register_callbacks(app):
             else:
                 all_comments.append(html.P("No comments yet."))
 
-        return all_comments, input_values
-
-
+        return all_comments, input_values, status_messages
