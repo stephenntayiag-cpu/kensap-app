@@ -174,6 +174,3 @@ def handle_auth_and_logout(login_click, signup_click, pathname, username, passwo
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
-
-
-
