@@ -1,4 +1,5 @@
 import os
+import json
 import dash
 from dash import html, dcc, callback_context
 import dash_bootstrap_components as dbc
@@ -16,7 +17,6 @@ os.makedirs("data", exist_ok=True)
 
 if not os.path.exists(COMMENTS_FILE):
     with open(COMMENTS_FILE, "w", encoding="utf-8") as f:
-        import json
         json.dump({}, f, ensure_ascii=False)
 
 # -----------------------------
@@ -25,7 +25,6 @@ if not os.path.exists(COMMENTS_FILE):
 def safe_load_comments():
     try:
         with open(COMMENTS_FILE, "r", encoding="utf-8") as f:
-            import json
             data = json.load(f)
             if isinstance(data, dict):
                 return data
@@ -36,7 +35,6 @@ def safe_load_comments():
 def safe_save_comments(comments):
     try:
         with open(COMMENTS_FILE, "w", encoding="utf-8") as f:
-            import json
             json.dump(comments, f, ensure_ascii=False)
     except Exception:
         pass
@@ -66,9 +64,7 @@ def layout():
     return html.Div([
         html.H2("Gallery", style={"textAlign": "center", "marginTop": "20px"}),
         dcc.Store(id="current-user", data={"username": "Unknown"}, storage_type="session"),
-        html.Div(photo_elements),
-        # short interval to refresh comments so everyone sees updates quickly
-        dcc.Interval(id="comments-refresh", interval=1000, n_intervals=0)
+        html.Div(photo_elements)
     ])
 
 # -----------------------------
@@ -79,24 +75,24 @@ def register_callbacks(app):
         Output({'type': 'comments', 'index': ALL}, 'children'),
         Output({'type': 'input', 'index': ALL}, 'value'),
         Input({'type': 'submit', 'index': ALL}, 'n_clicks'),
-        Input("comments-refresh", "n_intervals"),
         State({'type': 'input', 'index': ALL}, 'value'),
         State("current-user", "data"),
         prevent_initial_call=True
     )
-    def handle_comments(n_clicks_list, n_intervals, input_values, user_session):
+    def handle_comments(n_clicks_list, input_values, user_session):
         ctx = callback_context
         username = user_session.get("username", "Unknown User") if user_session else "Unknown User"
 
         comments = safe_load_comments()
 
         # Only save new comment if a submit button was clicked
-        if ctx.triggered and "submit" in ctx.triggered[0]['prop_id']:
-            triggered_id = eval(ctx.triggered[0]['prop_id'].split('.')[0])
+        triggered_id = ctx.triggered_id
+        if triggered_id and triggered_id.get('type') == 'submit':
             photo_name = triggered_id['index']
 
-            # Map input values to photo names
-            input_index = [i for i, comp_id in enumerate([c['index'] for c in ctx.states_list[0]]) if comp_id == photo_name][0]
+            # Map input values to photo names using the order of ALL inputs
+            input_indices = [c['index'] for c in ctx.inputs_list[0]]
+            input_index = input_indices.index(photo_name)
             comment_text = input_values[input_index]
 
             if comment_text and comment_text.strip():
@@ -110,20 +106,22 @@ def register_callbacks(app):
                 comments[photo_name].insert(0, comment_entry)  # newest on top
                 safe_save_comments(comments)
 
+            # Reset only the input box that was submitted
+            input_values[input_index] = ""
+
         # Build comment list for all photos
         all_comments = []
         for filename in os.listdir(PHOTOS_FOLDER):
             if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
                 photo_comments = comments.get(filename, [])
                 if photo_comments:
-                    formatted = [html.Li([html.B(f"{c['username']} – {c['timestamp']}"), html.Br(), html.Span(c['text'])])
-                                 for c in photo_comments]
+                    formatted = [
+                        html.Li([
+                            html.B(f"{c['username']} – {c['timestamp']}"),
+                            html.Br(),
+                            html.Span(c['text'])
+                        ]) for c in photo_comments
+                    ]
                     all_comments.append(html.Ul(formatted))
                 else:
-                    all_comments.append(html.P("No comments yet."))
-
-        # Only reset input boxes if a submit button was clicked
-        reset_inputs = [""] * len(input_values) if ctx.triggered and "submit" in ctx.triggered[0]['prop_id'] else input_values
-        return all_comments, reset_inputs
-
-
+                    all_comme_
