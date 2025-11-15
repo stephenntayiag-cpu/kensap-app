@@ -110,7 +110,7 @@ def display_page(pathname, session_data):
     elif pathname == '/logout':
         return html.Div("You have logged out")
     elif pathname == '/homepage':
-        return homepage.layout
+        return homepage.layout(session_data)  # <- pass session_data so login persists
     else:
         return login_layout
 
@@ -174,3 +174,4 @@ def handle_auth_and_logout(login_click, signup_click, pathname, username, passwo
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
+
