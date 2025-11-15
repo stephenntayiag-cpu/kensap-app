@@ -10,13 +10,16 @@ import gallery
 import alumni
 import profile
 
-# Initialize app with bootstrap theme
+# -----------------------------
+# Initialize app
+# -----------------------------
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.LUX], suppress_callback_exceptions=True)
 app.title = "KenSAP"
 server = app.server  
 USERS_FILE = "data/users.json"
 
 # Ensure users.json exists
+os.makedirs("data", exist_ok=True)
 if not os.path.exists(USERS_FILE):
     with open(USERS_FILE, "w") as f:
         json.dump({}, f)
@@ -40,10 +43,10 @@ login_layout = html.Div([
 ])
 
 # -----------------------------
-# App Layout
+# App layout
 # -----------------------------
 app.layout = html.Div([
-    dcc.Store(id='user-session', storage_type='session'),  # <-- Global session store
+    dcc.Store(id='user-session', storage_type='session'),  # Global session store
 
     dbc.NavbarSimple(
         brand="KenSAP",
@@ -108,58 +111,57 @@ def display_page(pathname, session_data):
         return login_layout
 
 # -----------------------------
-# Authentication callbacks
+# Combined Authentication + Logout callback
 # -----------------------------
 @app.callback(
-    Output("login-output", "children"),
     Output("user-session", "data"),
+    Output("login-output", "children"),
     Input("login-button", "n_clicks"),
     Input("signup-button", "n_clicks"),
+    Input("url", "pathname"),
     State("username", "value"),
     State("password", "value"),
+    State("user-session", "data"),
     prevent_initial_call=True
 )
-def handle_auth(login_click, signup_click, username, password):
+def handle_auth_and_logout(login_click, signup_click, pathname, username, password, session_data):
     ctx = dash.callback_context
     if not ctx.triggered:
         raise dash.exceptions.PreventUpdate
+    trigger = ctx.triggered[0]['prop_id'].split('.')[0]
 
-    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    # -------------------------
+    # LOGOUT
+    # -------------------------
+    if pathname == "/logout":
+        return None, "You have logged out."
+
+    # -------------------------
+    # LOGIN / SIGNUP
+    # -------------------------
+    if trigger not in ["login-button", "signup-button"]:
+        raise dash.exceptions.PreventUpdate
 
     if not username or not password:
-        return "Please enter both username and password.", None
+        return session_data, "Please enter both username and password."
 
     with open(USERS_FILE, "r") as f:
         users = json.load(f)
 
-    if button_id == "login-button":
+    if trigger == "login-button":
         if username in users and users[username] == password:
-            return f"Login successful. Welcome {username}!", {"username": username}
+            return {"username": username}, f"Login successful. Welcome {username}!"
         else:
-            return "Invalid username or password.", None
+            return None, "Invalid username or password."
 
-    elif button_id == "signup-button":
+    if trigger == "signup-button":
         if username in users:
-            return "Username already exists. Try logging in.", None
+            return session_data, "Username already exists. Try logging in."
         else:
             users[username] = password
             with open(USERS_FILE, "w") as f:
                 json.dump(users, f)
-            return f"Sign-up successful! You can now log in, {username}.", None
-
-# -----------------------------
-# Logout callback
-# -----------------------------
-@app.callback(
-    Output("user-session", "data"),
-    Output("login-output", "children"),
-    Input("url", "pathname"),
-    State("user-session", "data")
-)
-def handle_logout(pathname, session_data):
-    if pathname == "/logout":
-        return None, "You have logged out."
-    return session_data, dash.no_update
+            return session_data, f"Sign-up successful! You can now log in, {username}."
 
 # -----------------------------
 # Run the app
