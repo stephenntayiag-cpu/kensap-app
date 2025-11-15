@@ -90,26 +90,29 @@ def register_callbacks(app):
 
         comments = safe_load_comments()
 
-        # Save new comment if submit button was clicked
-        if ctx.triggered and ctx.triggered[0]['prop_id'].split('.')[0] != "comments-refresh":
+        # Only save new comment if a submit button was clicked
+        if ctx.triggered and "submit" in ctx.triggered[0]['prop_id']:
             triggered_id = eval(ctx.triggered[0]['prop_id'].split('.')[0])
             photo_name = triggered_id['index']
 
-            # Find input index
+            # Map input values to photo names
             input_index = [i for i, comp_id in enumerate([c['index'] for c in ctx.states_list[0]]) if comp_id == photo_name][0]
             comment_text = input_values[input_index]
 
             if comment_text and comment_text.strip():
-                comment_entry = {"username": username, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"), "text": comment_text.strip()}
+                comment_entry = {
+                    "username": username,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "text": comment_text.strip()
+                }
                 if photo_name not in comments:
                     comments[photo_name] = []
-                # Insert newest on top
-                comments[photo_name].insert(0, comment_entry)
+                comments[photo_name].insert(0, comment_entry)  # newest on top
                 safe_save_comments(comments)
 
         # Build comment list for all photos
         all_comments = []
-        for i, filename in enumerate(os.listdir(PHOTOS_FOLDER)):
+        for filename in os.listdir(PHOTOS_FOLDER):
             if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
                 photo_comments = comments.get(filename, [])
                 if photo_comments:
@@ -119,6 +122,8 @@ def register_callbacks(app):
                 else:
                     all_comments.append(html.P("No comments yet."))
 
-        # Reset all input boxes
-        reset_inputs = [""] * len(input_values)
+        # Only reset input boxes if a submit button was clicked
+        reset_inputs = [""] * len(input_values) if ctx.triggered and "submit" in ctx.triggered[0]['prop_id'] else input_values
         return all_comments, reset_inputs
+
+
