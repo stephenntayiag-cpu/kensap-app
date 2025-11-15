@@ -24,8 +24,6 @@ if not os.path.exists(USERS_FILE):
 # -----------------------------
 # Page layouts
 # -----------------------------
-# FIX: user-session store MUST NOT be inside a page layout
-# It must be global, not inside login_layout
 login_layout = html.Div([
     dbc.Container([
         html.H2("KenSAP Login", className="text-center", style={"marginTop": "50px"}),
@@ -41,10 +39,11 @@ login_layout = html.Div([
     ])
 ])
 
-# Layout
-# FIX: global Store placed here (before any callbacks fire)
+# -----------------------------
+# App Layout
+# -----------------------------
 app.layout = html.Div([
-    dcc.Store(id='user-session', storage_type='session'),
+    dcc.Store(id='user-session', storage_type='session'),  # <-- Global session store
 
     dbc.NavbarSimple(
         brand="KenSAP",
@@ -78,14 +77,14 @@ app.layout = html.Div([
 ])
 
 # -----------------------------
-# Register callbacks
+# Register callbacks from other modules
 # -----------------------------
 gallery.register_callbacks(app)
 profile.register_callbacks(app)
 alumni.register_callbacks(app)
 
 # -----------------------------
-# Page routing (FIXED)
+# Page routing
 # -----------------------------
 @app.callback(
     Output('page-content', 'children'),
@@ -93,23 +92,18 @@ alumni.register_callbacks(app)
     State('user-session', 'data')
 )
 def display_page(pathname, session_data):
-
-    # Login page loads FIRST
     if pathname == '/' or pathname == '/login':
         return login_layout
-
     elif pathname == '/gallery':
         return gallery.layout()
-
     elif pathname == '/alumni':
         return alumni.layout()
-
     elif pathname == '/profile':
         return profile.layout(session_data)
-
     elif pathname == '/logout':
         return html.Div("You have logged out")
-
+    elif pathname == '/homepage':
+        return homepage.layout
     else:
         return login_layout
 
@@ -153,6 +147,9 @@ def handle_auth(login_click, signup_click, username, password):
                 json.dump(users, f)
             return f"Sign-up successful! You can now log in, {username}.", None
 
+# -----------------------------
+# Logout callback
+# -----------------------------
 @app.callback(
     Output("user-session", "data"),
     Output("login-output", "children"),
@@ -164,6 +161,9 @@ def handle_logout(pathname, session_data):
         return None, "You have logged out."
     return session_data, dash.no_update
 
+# -----------------------------
+# Run the app
+# -----------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
