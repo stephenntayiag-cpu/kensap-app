@@ -26,7 +26,7 @@ def layout(user_session):
                 html.Div(id="profile-output", style={"marginTop": "15px", "color": "green"})
             ], style={"marginTop": "30px"})
         ]),
-        dcc.Store(id="current-user", data=user_session, storage_type="session")
+        dcc.Store(id="current-user", storage_type="session")  # <-- removed data=..., now uses global session
     ])
 
 def get_profile_path(username):
@@ -45,7 +45,7 @@ def get_current_username(user_session):
 def register_callbacks(app):
     @app.callback(
         Output("profile-display", "children"),
-        Input("current-user", "data")
+        Input("user-session", "data")  # <-- changed to global session
     )
     def display_profile(user_session):
         if not user_session:
@@ -68,7 +68,7 @@ def register_callbacks(app):
         Output("profile-input", "value"),
         Input("save-profile-button", "n_clicks"),
         State("profile-input", "value"),
-        State("current-user", "data"),
+        State("user-session", "data"),  # <-- changed to global session
         prevent_initial_call=True
     )
     def save_profile(n_clicks, info_text, user_session):
