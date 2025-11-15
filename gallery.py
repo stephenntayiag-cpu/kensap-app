@@ -73,7 +73,8 @@ def register_callbacks(app):
         triggered_id = eval(ctx.triggered[0]['prop_id'].split('.')[0])
         photo_name = triggered_id['index']
 
-        input_index = next(i for i, comp in enumerate(ctx.inputs_list[0]) if comp['id']['index'] == photo_name)
+        # Find the corresponding input value
+        input_index = next(i for i, comp_id in enumerate([c['index'] for c in ctx.inputs[1]]) if comp_id == photo_name)
         comment_text = comments_list_state[input_index]
 
         if comment_text and comment_text.strip():
