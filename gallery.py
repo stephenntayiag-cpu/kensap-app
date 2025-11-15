@@ -76,17 +76,16 @@ def register_callbacks(app):
     @app.callback(
         Output({'type': 'comments', 'index': ALL}, 'children'),
         Output({'type': 'input', 'index': ALL}, 'value'),
-        Output({'type': 'status', 'index': ALL}, 'children'),  # new status output
+        Output({'type': 'status', 'index': ALL}, 'children'),
         Input({'type': 'submit', 'index': ALL}, 'n_clicks'),
         State({'type': 'input', 'index': ALL}, 'value'),
-        State({'type': 'comments', 'index': ALL}, 'id'),  # get the IDs of comment divs
+        State({'type': 'comments', 'index': ALL}, 'id'),
         State("current-user", "data"),
         prevent_initial_call=True
     )
     def handle_comments(n_clicks_list, input_values, comment_ids, user_session):
         ctx = callback_context
         username = user_session.get("username", "Unknown User") if user_session else "Unknown User"
-
         comments = safe_load_comments()
 
         # Initialize status messages for each photo
@@ -96,8 +95,8 @@ def register_callbacks(app):
         if triggered_id and triggered_id.get('type') == 'submit':
             photo_name = triggered_id['index']
 
-            # Find input index corresponding to the submitted photo
-            input_indices = [c['index'] for c in ctx.inputs_list[0]]
+            # Correctly extract ids from ctx.inputs_list
+            input_indices = [comp['id']['index'] for comp in ctx.inputs_list[0]]
             input_index = input_indices.index(photo_name)
             comment_text = input_values[input_index]
 
@@ -110,18 +109,16 @@ def register_callbacks(app):
                     }
                     if photo_name not in comments:
                         comments[photo_name] = []
-                    comments[photo_name].insert(0, comment_entry)  # newest on top
+                    comments[photo_name].insert(0, comment_entry)
                     safe_save_comments(comments)
-
-                    # Reset input box
                     input_values[input_index] = ""
-                    status_messages[input_index] = dbc.Alert("Comment uploaded!", color="success", duration=3000)
+                    status_messages[input_index] = dbc.Alert("Comment uploaded!", color="success")
                 else:
-                    status_messages[input_index] = dbc.Alert("Cannot submit empty comment.", color="warning", duration=3000)
+                    status_messages[input_index] = dbc.Alert("Cannot submit empty comment.", color="warning")
             except Exception:
-                status_messages[input_index] = dbc.Alert("Failed to upload comment.", color="danger", duration=3000)
+                status_messages[input_index] = dbc.Alert("Failed to upload comment.", color="danger")
 
-        # Build comment list **in the same order as comment_ids**
+        # Build comments in same order as comment_ids
         all_comments = []
         for c_id in comment_ids:
             filename = c_id['index']
