@@ -49,12 +49,14 @@ def register_callbacks(app):
             data = json.load(f)
         info_content = data.get("info", "No info yet.")
         if isinstance(info_content, list):
-            return html.Div([html.P(item) for item in info_content])
+            # newest info on top
+            return html.Div([html.P(item) for item in reversed(info_content)])
         else:
             return html.P(info_content)
 
     @app.callback(
         Output("profile-output", "children"),
+        Output("profile-input", "value"),
         Input("save-profile-button", "n_clicks"),
         State("profile-input", "value"),
         State("current-user", "data"),
@@ -62,9 +64,9 @@ def register_callbacks(app):
     )
     def save_profile(n_clicks, info_text, user_session):
         if not user_session:
-            return "You must be logged in to save your info."
+            return "You must be logged in to save your info.", ""
         if not info_text:
-            return "Please enter some text to save."
+            return "Please enter some text to save.", ""
         username = user_session.get("username")
         profile_file = get_profile_path(username)
 
@@ -77,11 +79,11 @@ def register_callbacks(app):
                 if isinstance(existing_info, str):  # convert old string format to list
                     existing_info = [existing_info]
 
-        # Append new info
+        # Append new info on top
         existing_info.append(info_text.strip())
 
         # Save updated info
         with open(profile_file, "w", encoding="utf-8") as f:
             json.dump({"info": existing_info}, f, ensure_ascii=False)
 
-        return "Your info has been saved successfully!"
+        return "Your info has been saved successfully!", ""
