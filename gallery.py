@@ -124,4 +124,6 @@ def register_callbacks(app):
                     ]
                     all_comments.append(html.Ul(formatted))
                 else:
-                    all_comme_
+                    all_comments.append(html.P("No comments yet."))
+
+        return all_comments, input_values
