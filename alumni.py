@@ -22,24 +22,14 @@ def layout():
                 dbc.Input(id="alumni-name-input", placeholder="Enter your username", type="text", style={"marginTop": "10px"}),
                 dbc.Button("Add Me", id="add-alumni-button", color="primary", style={"marginTop": "10px"}),
                 html.Div(id="alumni-output", style={"marginTop": "15px", "color": "green"})
-            ], style={"marginTop": "30px"}),
-            dcc.Interval(id="alumni-refresh", interval=1000, n_intervals=0)  # refresh every 1s
+            ], style={"marginTop": "30px"})
         ])
     ])
 
 def register_callbacks(app):
     @app.callback(
         Output("alumni-list", "children"),
-        Input("alumni-refresh", "n_intervals")
-    )
-    def display_alumni(_):
-        with open(ALUMNI_FILE, "r", encoding="utf-8") as f:
-            alumni = json.load(f)
-        if not alumni:
-            return html.P("No alumni yet.")
-        return html.Ul([html.Li(name) for name in alumni])
-
-    @app.callback(
+        Output("alumni-name-input", "value"),
         Output("alumni-output", "children"),
         Input("add-alumni-button", "n_clicks"),
         State("alumni-name-input", "value"),
@@ -47,7 +37,7 @@ def register_callbacks(app):
     )
     def add_alumni(n_clicks, name):
         if not name or not name.strip():
-            return "Please enter a valid username."
+            return dash.no_update, "", "Please enter a valid username."
         name = name.strip()
 
         # Load existing alumni
@@ -56,8 +46,14 @@ def register_callbacks(app):
 
         # Append new alumni if not already present
         if name not in alumni:
-            alumni.append(name)
+            alumni.insert(0, name)  # newest on top
             with open(ALUMNI_FILE, "w", encoding="utf-8") as f:
                 json.dump(alumni, f, ensure_ascii=False)
 
-        return f"{name} has been added to the alumni list!"
+        # Display updated list
+        if not alumni:
+            list_children = html.P("No alumni yet.")
+        else:
+            list_children = html.Ul([html.Li(n) for n in alumni])
+
+        return list_children, "", f"{name} has been added to the alumni list!"
