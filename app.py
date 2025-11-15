@@ -95,12 +95,22 @@ alumni.register_callbacks(app)
     State('user-session', 'data')
 )
 def display_page(pathname, session_data):
+    # Redirect / to homepage if logged in
+    if pathname == '/':
+        if session_data:
+            return homepage.layout(session_data)
+        else:
+            return login_layout
+
     # Restrict pages unless logged in
-    if pathname not in ['/login', '/'] and not session_data:
+    if pathname not in ['/login', '/homepage'] and not session_data:
         return login_layout
 
-    if pathname == '/' or pathname == '/login':
+    # Page routing
+    if pathname == '/login':
         return login_layout
+    elif pathname == '/homepage':
+        return homepage.layout(session_data)
     elif pathname == '/gallery':
         return gallery.layout()
     elif pathname == '/alumni':
@@ -109,10 +119,9 @@ def display_page(pathname, session_data):
         return profile.layout(session_data)
     elif pathname == '/logout':
         return html.Div("You have logged out")
-    elif pathname == '/homepage':
-        return homepage.layout
     else:
         return login_layout
+
 
 # -----------------------------
 # Combined Authentication + Logout callback
@@ -174,3 +183,4 @@ def handle_auth_and_logout(login_click, signup_click, pathname, username, passwo
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
+
