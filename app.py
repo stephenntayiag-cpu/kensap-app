@@ -24,6 +24,8 @@ if not os.path.exists(USERS_FILE):
 # -----------------------------
 # Page layouts
 # -----------------------------
+# FIX: user-session store MUST NOT be inside a page layout
+# It must be global, not inside login_layout
 login_layout = html.Div([
     dbc.Container([
         html.H2("KenSAP Login", className="text-center", style={"marginTop": "50px"}),
@@ -34,14 +36,16 @@ login_layout = html.Div([
                 dbc.Button("Login", id="login-button", color="primary", style={"marginTop": "20px"}),
                 dbc.Button("Sign Up", id="signup-button", color="secondary", style={"marginTop": "10px"}),
                 html.Div(id="login-output", style={"marginTop": "20px", "color": "red"}),
-                dcc.Store(id='user-session', storage_type='session')
             ], width=6)
         ], justify="center")
     ])
 ])
 
 # Layout
+# FIX: global Store placed here (before any callbacks fire)
 app.layout = html.Div([
+    dcc.Store(id='user-session', storage_type='session'),
+
     dbc.NavbarSimple(
         brand="KenSAP",
         color="black",
@@ -74,14 +78,14 @@ app.layout = html.Div([
 ])
 
 # -----------------------------
-# Register callbacks from other modules
+# Register callbacks
 # -----------------------------
 gallery.register_callbacks(app)
 profile.register_callbacks(app)
 alumni.register_callbacks(app)
 
 # -----------------------------
-# Page routing
+# Page routing (FIXED)
 # -----------------------------
 @app.callback(
     Output('page-content', 'children'),
@@ -89,47 +93,23 @@ alumni.register_callbacks(app)
     State('user-session', 'data')
 )
 def display_page(pathname, session_data):
-    if pathname == '/homepage':
-        return html.Div([
-            html.Div([
-    dbc.Container([
-        html.H1("Welcome to KenSAP", style={'textAlign': 'center', 'color': '#C0154B', 'marginTop': '30px'}),
-        html.H4("Empowering Kenya’s Brightest Minds for Global Impact",
-                style={'textAlign': 'center', 'color': '#555555', 'marginBottom': '20px'}),
-        dbc.Button("Learn More", color="primary", href="/gallery",
-                   style={'display': 'block', 'margin': '0 auto', 'marginBottom': '40px'})
-    ]),
 
-    dbc.Container([
-        html.H2("About KenSAP", style={'color': '#C0154B', 'marginTop': '20px'}),
-        html.P(
-            "The Kenya Scholar Access Program (KenSAP) is a non-profit initiative that identifies, prepares, "
-            "and connects exceptional Kenyan students from underprivileged backgrounds with educational opportunities "
-            "at some of the world’s leading universities, primarily in North America. "
-            "Since its founding in 2004, KenSAP has transformed the lives of hundreds of scholars.",
-            style={'fontSize': '18px', 'lineHeight': '1.8'}
-        ),
-    ], style={'marginBottom': '40px'}),
+    # Login page loads FIRST
+    if pathname == '/' or pathname == '/login':
+        return login_layout
 
-    dbc.Container([
-        html.H2("Our Impact", style={'color': '#C0154B', 'marginTop': '20px', 'textAlign': 'center'}),
-        html.P(
-            "Over 320 students helped to access top universities globally.\n"
-            "Alumni active in leadership, research, and entrepreneurship.\n"
-            "Annual fundraising and mentoring programs to sustain opportunities.",
-            style={'fontSize': '16px', 'lineHeight': '1.8', 'textAlign': 'center'}
-        )
-    ], style={'marginBottom': '40px'}),
-])
-        ])
     elif pathname == '/gallery':
-        return gallery.layout() 
+        return gallery.layout()
+
     elif pathname == '/alumni':
         return alumni.layout()
+
     elif pathname == '/profile':
         return profile.layout(session_data)
+
     elif pathname == '/logout':
         return html.Div("You have logged out")
+
     else:
         return login_layout
 
@@ -187,7 +167,3 @@ def handle_logout(pathname, session_data):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8050))
     app.run_server(debug=False, host="0.0.0.0", port=port)
-
-
-
-
