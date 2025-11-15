@@ -4,7 +4,8 @@ import dash
 from dash import html, dcc, callback_context
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State, ALL
-from datetime import datetime
+from datetime import datetime, timedelta
+from profile import get_current_username  # <-- fixed import
 
 # -----------------------------
 # Paths and files
@@ -89,7 +90,7 @@ def register_callbacks(app):
     )
     def handle_comments(submit_n, show_n, input_values, comment_ids, user_session):
         ctx = callback_context
-        username = user_session.get("username", "Unknown User")
+        username = get_current_username(user_session)  # <-- fixed username
         comments = safe_load_comments()
         status_messages = [""] * len(input_values)
 
@@ -106,7 +107,7 @@ def register_callbacks(app):
                     if comment_text and comment_text.strip():
                         comment_entry = {
                             "username": username,
-                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                            "timestamp": (datetime.utcnow() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M"),  # <-- fixed time
                             "text": comment_text.strip()
                         }
                         if photo_name not in comments:
