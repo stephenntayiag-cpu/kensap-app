@@ -1,7 +1,7 @@
 import os
 import json
 import dash
-from dash import html, dcc
+from dash import html, dcc, callback_context
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
@@ -116,6 +116,7 @@ def display_page(pathname, session_data):
 @app.callback(
     Output("user-session", "data"),
     Output("login-output", "children"),
+    Output("url", "pathname"),  # Redirect after login
     Input("login-button", "n_clicks"),
     Input("signup-button", "n_clicks"),
     Input("url", "pathname"),
@@ -125,7 +126,7 @@ def display_page(pathname, session_data):
     prevent_initial_call=True
 )
 def handle_auth_and_logout(login_click, signup_click, pathname, username, password, session_data):
-    ctx = dash.callback_context
+    ctx = callback_context
     if not ctx.triggered:
         raise dash.exceptions.PreventUpdate
     trigger = ctx.triggered[0]['prop_id'].split('.')[0]
@@ -134,7 +135,7 @@ def handle_auth_and_logout(login_click, signup_click, pathname, username, passwo
     # LOGOUT
     # -------------------------
     if pathname == "/logout":
-        return None, "You have logged out."
+        return None, "You have logged out.", "/login"
 
     # -------------------------
     # LOGIN / SIGNUP
@@ -143,25 +144,25 @@ def handle_auth_and_logout(login_click, signup_click, pathname, username, passwo
         raise dash.exceptions.PreventUpdate
 
     if not username or not password:
-        return session_data, "Please enter both username and password."
+        return session_data, "Please enter both username and password.", dash.no_update
 
     with open(USERS_FILE, "r") as f:
         users = json.load(f)
 
     if trigger == "login-button":
         if username in users and users[username] == password:
-            return {"username": username}, f"Login successful. Welcome {username}!"
+            return {"username": username}, f"Login successful. Welcome {username}!", "/homepage"
         else:
-            return None, "Invalid username or password."
+            return None, "Invalid username or password.", dash.no_update
 
     if trigger == "signup-button":
         if username in users:
-            return session_data, "Username already exists. Try logging in."
+            return session_data, "Username already exists. Try logging in.", dash.no_update
         else:
             users[username] = password
             with open(USERS_FILE, "w") as f:
                 json.dump(users, f)
-            return session_data, f"Sign-up successful! You can now log in, {username}."
+            return session_data, f"Sign-up successful! You can now log in, {username}.", dash.no_update
 
 # -----------------------------
 # Run the app
